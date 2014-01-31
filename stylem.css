@@ -1,28 +1,39 @@
 ﻿.stylesDiv {
-	border: 2px solid brown;
+	border: 1px solid gray;
 	position: fixed;
 	float: right;
 	right: 50px;
 	top: 50px;
 	bottom: 50px;
-	width: 200px;
+	width: 300px;
 	padding: 10px;
-	background-color: yellow;
+	background-color: white;
 	overflow:auto;
+	border-radius: 3px;
+	box-shadow: rgba(0, 0, 0, 0.172549) 0px 6px 12px 0px;
+	-webkit-box-shadow: rgba(0, 0, 0, 0.172549) 0px 6px 12px 0px;
+	font-family: Arial, Helvetica, sans-serif;
+	font-size: 12px;
 }
 
 .styleSheetDiv {
 	border: 1px solid black;
 	margin-top:5px;
 	margin-bottom:5px;
+	padding-left:5px;
+	padding-right:5px;
 	background-color:white;
 	overflow:hidden;
+	border-radius: 3px;
 }
 
 .cssRuleDiv {
+	border-radius: 3px;
 	border: 1px solid gray;
 	margin-top:5px;
 	margin-bottom:5px;
+	padding-left:5px;
+	padding-right:5px;
 	background-color:lightgray;
 	overflow:hidden;
 	transition: background-color ease-out 1s;
@@ -31,5 +42,14 @@
 }
 
 .cssRuleApplied {
-	background-color: rgb(200, 50, 50);
+	background-color: rgb(200, 255, 200);
+}
+
+.classBody {
+	border: 1px solid gray;
+	background-color: white;
+	border-radius: 3px;
+	padding-left:5px;
+	padding-right:5px;
+	margin-bottom: 5px;
 }

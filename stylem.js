@@ -1,7 +1,7 @@
 ﻿$(function () {
 
 	var idLength = 20;
-	var ignorCssFiles = ["styleselector.css"];
+	var ignorCssFiles = ["stylem.css", "bootstrap.css"];
 
 	var ignoreThisCss = function (href) {
 		if (!href)
@@ -12,6 +12,12 @@
 		}
 		return false;
 	};
+
+	var toggleStyleInfo = function (evt) {
+		if (evt.currentTarget != evt.target)
+			return;
+		$(this.lastChild).toggle();
+	}
 
 	$("<div class=\"stylesDiv\"></div>").appendTo($("body"));
 
@@ -39,12 +45,17 @@
 			}
 		}
 		ssDiv.id = ssId;
-		ssDiv.item = $("<div class=\"styleSheetDiv\" title=\"" + ssId + "\">" + ssId + "</div>").appendTo(styleDiv);
+		ssDiv.itemElem = $("<div class=\"styleSheetDiv\" title=\"" + ssId + "\">" + ssId + "</div>").appendTo(styleDiv);
+		ssDiv.containerElem = $("<div style=\"display:none;\"></div>").appendTo(ssDiv.itemElem);
+		ssDiv.itemElem.click(toggleStyleInfo);
 
 		for (var cr = 0; cr < ssDiv.styleSheet.cssRules.length; cr++) {
+			if (!ssDiv.styleSheet.cssRules[cr].selectorText)
+				continue;
 			var cssRule = {
 				selector: "",
 				cssText: "",
+				styleSheet: ssDiv,
 				cssRule: ssDiv.styleSheet.cssRules[cr]
 			};
 			cssRule.selector = cssRule.cssRule.selectorText;
@@ -52,25 +63,30 @@
 			var openBr = cssRule.cssText.indexOf("{");
 			var closeBr = cssRule.cssText.indexOf("}");
 			cssRule.cssText = cssRule.cssText.substring(openBr + 1, closeBr);
-			cssRule.item = $("<div class=\"cssRuleDiv\" title=\"" + cssRule.selector + "\">" + cssRule.selector + "</div>").appendTo(ssDiv.item);
-			cssRule.checker = window.setInterval(function () {
-				var elems = $(cssRule.selector);
-				if (cssRule.applied) {
+			cssRule.itemElem = $("<div class=\"cssRuleDiv\" title=\"" + cssRule.selector + "\">" + cssRule.selector + "</div>").appendTo(ssDiv.containerElem);
+			cssRule.checker = window.setInterval(function (rule) {
+				if (!rule.styleSheet.containerElem[0].offsetHeight)
+					return;
+				var elems = $(rule.selector);
+				if (rule.applied) {
 					if (elems.length == 0) {
-						cssRule.applied = false;
-						cssRule.item.removeClass("cssRuleApplied");
+						rule.applied = false;
+						rule.itemElem.removeClass("cssRuleApplied");
 					}
 				} else {
 					if (elems.length > 0) {
-						cssRule.applied = true;
-						cssRule.item.addClass("cssRuleApplied");
+						rule.applied = true;
+						rule.itemElem.addClass("cssRuleApplied");
 					}
 				}
-			}, 500);
+			}, 500, cssRule);
+
+			cssRule.contentElem = $("<div class=\"classBody\" style=\"display:none;\">" + cssRule.cssText + "</div>").appendTo(cssRule.itemElem);
+			cssRule.itemElem.click(toggleStyleInfo);
+
+			ssDiv.cssRules.push(cssRule);
 		}
 
 		styleSheetDivs.push(ssDiv);
-		//if (document.styleSheets[ss].href && document.styleSheets[ss].href.endsWith(styleSheetNames[i])) {
-		//	return document.styleSheets[ss];
 	}
 });
