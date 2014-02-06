@@ -2,6 +2,7 @@
 
 	var idLength = 20;
 	var ignorCssFiles = ["stylem.css", "bootstrap.css"];
+	var stylemContainer = null;
 
 	function ignoreThisCss(href) {
 		if (!href)
@@ -11,6 +12,12 @@
 				return true;
 		}
 		return false;
+	}
+
+	function shortId(id) {
+		if (id)
+			return (id.length > idLength ? "..." : "") + id.substring(id.length - idLength);
+		return "";
 	}
 
 	function toggleStyleInfo(evt) {
@@ -28,14 +35,156 @@
 		return false;
 	}
 
-	var pageStyleSheets = [];
-	function updateStyleSheets() {
-		alert("yo, ready for updating!")
+	function findStyleSheet(id) {
+		for (var i = 0; i < document.styleSheets.length; i++) {
+			var ss = document.styleSheets[i];
+			if (ss.href == id || ss.id == id)
+				return ss;
+		}
+		return null;
 	}
 
-	$("<div class=\"stylesDiv\"></div>").appendTo($("body"));
+	function findCssRule(styleSheet, selector) {
 
-	var styleDiv = $(".stylesDiv");
+	}
+
+	function findCssSetting(cssRule, setting) {
+
+	}
+
+	var pageStyleSheets = [];
+	function registerStyleChanges() {
+		var changes = {
+			removedStyles: [],
+			linkedStyles: []
+		};
+		for (var i = 0; i < pageStyleSheets.length; i++) {
+			var chRules = pageStyleSheets[i].changedRules;
+			if (hasProperties(chRules)) {
+				for (var selector in chRules) {
+					if (chRules.hasOwnProperty(selector)) {
+						var rule = chRules[selector];
+						if (hasProperties(rule.removedStyles)) {
+							var rs = {selector: selector, styles: []};
+							for (var s in rule.removedStyles) {
+								if (rule.removedStyles.hasOwnProperty(s)) {
+									rs.styles.push(s);
+								}
+							}
+							changes.removedStyles.push(rs);
+						}
+						if (hasProperties(rule.linkedStyles)) {
+							var rs = { selector: selector, links: [] };
+							for (var s in rule.linkedStyles) {
+								if (rule.linkedStyles.hasOwnProperty(s)) {
+									rs.links.push({ name: s, link: rule.linkedStyles[s] });
+								}
+							}
+							changes.linkedStyles.push(rs);
+						}
+					}
+				}
+			}
+		}
+		injectChanges(changes);
+	}
+
+	var emptyDiv = null;
+	function injectChanges(changes) {
+		var styleEl = $("#__injectedStyles");
+		if (styleEl.length)
+			styleEl[0].parentNode.removeChild(styleEl[0]);
+
+		styleEl = document.createElement("style");
+		styleEl.setAttribute("rel", "stylesheet");
+		styleEl.setAttribute("id", "__injectedStyles");
+		document.body.appendChild(styleEl);
+
+		var injectedStyles = document.styleSheets[document.styleSheets.length - 1];
+
+		if (!emptyDiv) {
+			emptyDiv = document.createElement("div");
+			emptyDiv.setAttribute("id", "__emptyDiv");
+		}
+		document.body.appendChild(emptyDiv);
+
+		var emptyStyle = window.getComputedStyle(emptyDiv);
+
+		for (var i = 0; changes.removedStyles && i < changes.removedStyles.length; i++) {
+			var remStyle = changes.removedStyles[i];
+
+			console.log(remStyle.selector);
+
+			var cssText = "";
+			for (var j = 0; j < remStyle.styles.length; j++) {
+				var remSettingName = remStyle.styles[j];
+				var remSettingValue = defaultStyleValue(remSettingName, emptyStyle);
+				if (remSettingValue) {
+					var remSetting = remSettingName + ": " + remSettingValue + ";";
+					console.log(remSetting);
+					cssText += remSetting;
+				}
+				else {
+					console.log("Could not find default value for: " + remSettingName);
+				}
+			}
+
+			if (injectedStyles.insertRule) {
+				injectedStyles.insertRule(remStyle.selector + " {" + cssText + "}", injectedStyles.cssRules ? injectedStyles.cssRules.length : 0);
+			}
+			else if (injectedStyles.addRule) {
+				injectedStyles.addRule(remStyle.selector, cssText);
+			}
+		}
+
+		for (var i = 0; changes.linkedStyles && i < changes.linkedStyles.length; i++) {
+			var linkStyle = changes.linkedStyles[i];
+
+			console.log(linkStyle.selector);
+
+			var cssText = "";
+			for (var j = 0; j < linkStyle.links.length; j++) {
+				var linkedStyle = linkStyle.links[j];
+
+			}
+
+			if (injectedStyles.insertRule) {
+				injectedStyles.insertRule(linkStyle.selector + " {" + cssText + "}", injectedStyles.cssRules ? injectedStyles.cssRules.length : 0);
+			}
+			else if (injectedStyles.addRule) {
+				injectedStyles.addRule(linkStyle.selector, cssText);
+			}
+		}
+
+		document.body.removeChild(emptyDiv);
+	}
+
+	function exportChanges(changes) {
+
+	}
+
+	function defaultStyleValue(settingName, defaultStyle) {
+		var value = defaultStyle[settingName];
+		if (!value) {
+			var mapDefaults = {
+				"background": "transparent none repeat scroll",
+				"border-width": "0px",
+				"border-style": "none",
+				"border-color": "transparent",
+				"border-top": "0px none transparent",
+				"border-bottom": "0px none transparent",
+				"border-left": "0px none transparent",
+				"border-right": "0px none transparent",
+				"border": "0px none transparent",
+				"padding": "0px",
+				"margin": "0px"
+			};
+			value = mapDefaults[settingName] || "";
+		}
+		return value;
+	}
+
+	stylemContainer = $("<div class=\"stylesDiv\"></div>").appendTo($("body"));
 
 	for (var ss = 0; ss < document.styleSheets.length; ss++) {
 		if (!document.styleSheets[ss].cssRules || !document.styleSheets[ss].cssRules.length)
@@ -43,24 +192,17 @@
 		if (ignoreThisCss(document.styleSheets[ss].href))
 			continue;
 
-		pageStyleSheets.push(new StyleSheetObject(styleDiv, document.styleSheets[ss]));
+		pageStyleSheets.push(new StyleSheetObject(stylemContainer, document.styleSheets[ss]));
 	}
 
 	function StyleSheetObject(styleContainer, styleSheet) {
+		this.styleContainer = styleContainer;
 		this.id = "";
 		this.styleSheet = styleSheet;
 		this.cssRules = [];
 		this.changedRules = {};
 
-		var ssId = this.styleSheet.id;
-		if (!ssId) {
-			ssId = this.styleSheet.href;
-			if (ssId) {
-				ssId = (ssId.length > idLength ? "..." : "") + ssId.substring(ssId.length - idLength);
-			} else {
-				ssId = "styleSheet " + ss;
-			}
-		}
+		var ssId = this.styleSheet.id || shortId(this.styleSheet.href) || "styleSheet " + ss;
 		this.id = ssId;
 		this.itemElem = $("<div class=\"styleSheetDiv\" title=\"" + ssId + "\">" + ssId + "</div>").appendTo(styleContainer);
 		this.containerElem = $("<div style=\"display:none;\"></div>").appendTo(this.itemElem);
@@ -80,7 +222,7 @@
 		else
 			delete this.changedRules[cssRule.selector];
 
-		updateStyleSheets();
+		registerStyleChanges();
 	};
 
 	function CssRuleObject(parentSS, rule) {
@@ -118,7 +260,19 @@
 		this.contentElem = $("<div class=\"classBody\" style=\"display:none;\"></div>").appendTo(this.itemElem);
 		this.itemElem.click(toggleStyleInfo);
 
-		populateStyleSettings(this);
+		var settings = this.cssText.split(";");
+		for (var i = 0; i < settings.length; i++) {
+			if (!settings[i] || !settings[i].trim())
+				continue;
+
+			var indexOfColon = settings[i].indexOf(":");
+			if (indexOfColon < 0)
+				continue;
+			var name = settings[i].substring(0, indexOfColon);
+			var value = settings[i].substring(indexOfColon + 1);
+
+			this.styles.push(new StyleSettingObject(name.trim(), value.trim(), this));
+		}
 	}
 
 	CssRuleObject.prototype.registerChange = function (setting) {
@@ -175,22 +329,16 @@
 		this.sElem = $("<span class=\"sBtn\">s</span>").appendTo(this.containerElem);
 		this.sElem.click(function (evt) {
 			var thisItem = $(this);
-			thisItem.toggleClass("sBtnApplied");
 			if (thisItem.hasClass("sBtnApplied")) {
-				$this.xElem.removeClass("xBtnApplied");
-				$this.settingElem.addClass("styleSettingRemoved");
-				$this.registerChange(
-					{
-						removed: false,
-						link: $this.addLink()
-					});
-			}
-			else {
+				thisItem.removeClass("sBtnApplied");
 				$this.settingElem.removeClass("styleSettingRemoved");
 				$this.registerChange(
 					{
 						link: ""
 					});
+			}
+			else {
+				$this.addLink();
 			}
 		});
 		this.settingElem = $("<span class=\"styleSetting\">" +
@@ -214,22 +362,62 @@
 		}
 	};
 
-	StyleSettingObject.prototype.addLink = function() {
-
+	StyleSettingObject.prototype.addLink = function () {
+		var $this = this;
+		selectLinkDialog(this, function (link) {
+			$this.sElem.addClass("sBtnApplied");
+			$this.xElem.removeClass("xBtnApplied");
+			$this.settingElem.addClass("styleSettingRemoved");
+			$this.registerChange(
+				{
+					removed: false,
+					link: link
+				});
+		});
 	};
 
-	function populateStyleSettings(cssRule) {
-		var settings = cssRule.cssText.split(";");
-		for (var i = 0; i < settings.length; i++) {
-			if (!settings[i] || !settings[i].trim())
-				continue;
-
-			var styleNames = settings[i].split(":");
-			if (styleNames.length != 2)
-				continue;
-
-			cssRule.styles.push(new StyleSettingObject(styleNames[0].trim(), styleNames[1].trim(), cssRule));
+	var chooseLinkDialog = null;
+	function selectLinkDialog(setting, success) {
+		if (!chooseLinkDialog) {
+			chooseLinkDialog = new ChooseLinkDialog();
 		}
+		chooseLinkDialog.successCallback = success;
+		chooseLinkDialog.showFor(setting);
 	}
 
+	function ChooseLinkDialog() {
+		var $this = this;
+		this.dialog = $("<div class=\"chooseLinkDiv\"></div>").appendTo(stylemContainer);
+
+		var div = $("<div></div>").appendTo(this.dialog);
+
+		this.ssSelect = $("<select class=\"styleSheetSelect\" size=\"1\"><option></option></select>").appendTo(div);
+		for (var ss = 0; ss < document.styleSheets.length; ss++) {
+			if (!document.styleSheets[ss].cssRules || !document.styleSheets[ss].cssRules.length)
+				continue;
+			var ssName = (document.styleSheets[ss].id || shortId(document.styleSheets[ss].href) || "styleSheet " + ss);
+			$("<option value=\"" + ssName + "\">" + ssName + "</option>").appendTo(this.ssSelect);
+		}
+
+		div = $("<div></div>").appendTo(this.dialog);
+
+		this.okBtn = $("<button>OK</button>").appendTo(div);
+		this.okBtn.click(function () {
+			var link = "";
+			if ($this.successCallback /*&& link*/)
+				$this.successCallback(link);
+			$this.dialog.hide();
+		});
+
+		this.cancelBtn = $("<button>Cancel</button>").appendTo(div);
+		this.cancelBtn.click(function () {
+			$this.dialog.hide();
+		});
+	}
+
+	ChooseLinkDialog.prototype.showFor = function (setting) {
+		this.dialog.show();
+		var settingOffset = setting.settingElem.offset();
+		this.dialog.offset({ left: settingOffset.left, top: settingOffset.top + setting.settingElem.height() });
+	}
 });
