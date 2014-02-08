@@ -94,3 +94,7 @@ div#__emptyDiv {
 	box-shadow: rgba(0, 0, 0, 0.172549) 0px 6px 12px 0px;
 	-webkit-box-shadow: rgba(0, 0, 0, 0.172549) 0px 6px 12px 0px;
 }
+
+.styleSheetSelect, .cssRuleSelect, .cssStyleSelect {
+	max-width: 150px;
+}

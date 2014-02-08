@@ -26,35 +26,77 @@
 		$(this.lastChild).toggle();
 	}
 
-	function hasProperties(obj) {
+	hasProperties = function (obj) {
 		for (var p in obj) {
 			if (!obj.hasOwnProperty(p))
 				continue;
 			return true;
 		}
 		return false;
-	}
+	};
 
 	function findStyleSheet(id) {
 		for (var i = 0; i < document.styleSheets.length; i++) {
 			var ss = document.styleSheets[i];
-			if (ss.href == id || ss.id == id)
+			if (ss.href == id || ss.id == id || id == i)
 				return ss;
 		}
 		return null;
 	}
 
 	function findCssRule(styleSheet, selector) {
-
+		if (!styleSheet || !styleSheet.cssRules)
+			return null;
+		for (var i = 0; i < styleSheet.cssRules.length; i++) {
+			var rule = styleSheet.cssRules[i];
+			if (rule.selectorText == selector)
+				return rule;
+		}
+		return null;
 	}
 
-	function findCssSetting(cssRule, setting) {
+	function getStyleSettings(cssRule) {
+		if (!cssRule.cssText)
+			return null;
 
+		var cssText = cssRule.cssText;
+		var openBr = cssText.indexOf("{");
+		var closeBr = cssText.indexOf("}");
+		cssText = cssText.substring(openBr + 1, closeBr);
+
+		var settings = cssText.split(";");
+		var styles = [];
+		for (var i = 0; i < settings.length; i++) {
+			if (!settings[i] || !settings[i].trim())
+				continue;
+
+			var indexOfColon = settings[i].indexOf(":");
+			if (indexOfColon < 0)
+				continue;
+			var name = settings[i].substring(0, indexOfColon);
+			var value = settings[i].substring(indexOfColon + 1);
+
+			styles.push({ name: name.trim(), value: value.trim() });
+		}
+		return styles;
+	}
+
+	function findStyleSetting(rule, setting) {
+		if (!rule)
+			return null;
+		var styles = getStyleSettings(rule);
+		for (var i = 0; styles && i < styles.length; i++) {
+			var s = styles[i];
+			if (s.name == setting)
+				return s;
+		}
+		return null;
 	}
 
 	var pageStyleSheets = [];
+	var changes = null;
 	function registerStyleChanges() {
-		var changes = {
+		changes = {
 			removedStyles: [],
 			linkedStyles: []
 		};
@@ -89,7 +131,6 @@
 		injectChanges(changes);
 	}
 
-	var emptyDiv = null;
 	function injectChanges(changes) {
 		var styleEl = $("#__injectedStyles");
 		if (styleEl.length)
@@ -102,10 +143,9 @@
 
 		var injectedStyles = document.styleSheets[document.styleSheets.length - 1];
 
-		if (!emptyDiv) {
-			emptyDiv = document.createElement("div");
-			emptyDiv.setAttribute("id", "__emptyDiv");
-		}
+		var emptyDiv = emptyDiv = document.createElement("div");
+		emptyDiv.setAttribute("id", "__emptyDiv");
+
 		document.body.appendChild(emptyDiv);
 
 		var emptyStyle = window.getComputedStyle(emptyDiv);
@@ -145,7 +185,17 @@
 			var cssText = "";
 			for (var j = 0; j < linkStyle.links.length; j++) {
 				var linkedStyle = linkStyle.links[j];
-
+				var styleSheet = findStyleSheet(linkedStyle.link.styleSheet);
+				var cssRule = findCssRule(styleSheet, linkedStyle.link.cssRule);
+				var styleSetting = findStyleSetting(cssRule, linkedStyle.link.setting);
+				if (styleSetting) {
+					var linkSetting = linkedStyle.name + ": " + styleSetting.value + ";";
+					console.log(linkSetting);
+					cssText += linkSetting;
+				}
+				else {
+					console.log("Could not find linked style for: " + JSON.stringify(linkedStyle.link));
+				}
 			}
 
 			if (injectedStyles.insertRule) {
@@ -160,7 +210,21 @@
 	}
 
 	function exportChanges(changes) {
+		if (!changes)
+			return "";
+		var fncToExport = [findStyleSheet, findCssRule, getStyleSettings, findStyleSetting, injectChanges];
 
+		var expStr = "var changes = ";
+		expStr += JSON.stringify(changes);
+		expStr += ";\n\r";
+
+		for (var i = 0; i < fncToExport.length; i++) {
+			expStr += fncToExport[i].toString() + "\n\r";
+		}
+
+		expStr += "injectChanges(changes);\n\r";
+
+		return expStr;
 	}
 
 	function defaultStyleValue(settingName, defaultStyle) {
@@ -185,6 +249,20 @@
 	}
 
 	stylemContainer = $("<div class=\"stylesDiv\"></div>").appendTo($("body"));
+	var exportBtn = $("<button>Export</button>").appendTo(stylemContainer);
+	exportBtn.click(function () {
+		var changesStr = exportChanges(changes);
+		if (!changesStr) {
+			console.log("Nothing to export.");
+			return;
+		}
+		if(!window.clipboardData) {
+			console.log("Only IE is supported at this point.");
+			return;
+		}
+		window.clipboardData.setData("text", changesStr);
+		alert("Your code is placed into clipboard.");
+	});
 
 	for (var ss = 0; ss < document.styleSheets.length; ss++) {
 		if (!document.styleSheets[ss].cssRules || !document.styleSheets[ss].cssRules.length)
@@ -260,18 +338,9 @@
 		this.contentElem = $("<div class=\"classBody\" style=\"display:none;\"></div>").appendTo(this.itemElem);
 		this.itemElem.click(toggleStyleInfo);
 
-		var settings = this.cssText.split(";");
+		var settings = getStyleSettings(rule);
 		for (var i = 0; i < settings.length; i++) {
-			if (!settings[i] || !settings[i].trim())
-				continue;
-
-			var indexOfColon = settings[i].indexOf(":");
-			if (indexOfColon < 0)
-				continue;
-			var name = settings[i].substring(0, indexOfColon);
-			var value = settings[i].substring(indexOfColon + 1);
-
-			this.styles.push(new StyleSettingObject(name.trim(), value.trim(), this));
+			this.styles.push(new StyleSettingObject(settings[i].name, settings[i].value, this));
 		}
 	}
 
@@ -386,6 +455,7 @@
 	}
 
 	function ChooseLinkDialog() {
+		this.link = null;
 		var $this = this;
 		this.dialog = $("<div class=\"chooseLinkDiv\"></div>").appendTo(stylemContainer);
 
@@ -396,16 +466,73 @@
 			if (!document.styleSheets[ss].cssRules || !document.styleSheets[ss].cssRules.length)
 				continue;
 			var ssName = (document.styleSheets[ss].id || shortId(document.styleSheets[ss].href) || "styleSheet " + ss);
-			$("<option value=\"" + ssName + "\">" + ssName + "</option>").appendTo(this.ssSelect);
+			$("<option value=\"" + (document.styleSheets[ss].id || document.styleSheets[ss].href || ss) + "\">" + ssName + "</option>").appendTo(this.ssSelect);
 		}
+		this.ssSelect.change(function () {
+			if (!this.value)
+				return;
+			var styleSheet = findStyleSheet(this.value);
+			if (!styleSheet || !styleSheet.cssRules)
+				return;
+
+			this.link = null;
+			$this.ruleSelect.empty();
+			$("<option></option>").appendTo($this.ruleSelect);
+			$this.styleSelect.empty();
+			$("<option></option>").appendTo($this.styleSelect);
+
+			for (var i = 0; i < styleSheet.cssRules.length; i++) {
+				var rule = styleSheet.cssRules[i];
+				if (!rule.selectorText)
+					continue;
+				$("<option value=\"" + rule.selectorText + "\">" + rule.selectorText + "</option>").appendTo($this.ruleSelect);
+			}
+		});
+
+		div = $("<div></div>").appendTo(this.dialog);
+		this.ruleSelect = $("<select class=\"cssRuleSelect\" size=\"1\"><option></option></select>").appendTo(div);
+		this.ruleSelect.change(function () {
+			if (!this.value)
+				return;
+			var styleSheet = findStyleSheet($this.ssSelect[0].value);
+			if (!styleSheet)
+				return;
+			var rule = findCssRule(styleSheet, this.value);
+			if (!rule)
+				return;
+
+			this.link = null;
+			$this.styleSelect.empty();
+			$("<option></option>").appendTo($this.styleSelect);
+
+			var styles = getStyleSettings(rule);
+			if (!styles)
+				return;
+
+			for (var i = 0; i < styles.length; i++) {
+				var setting = styles[i];
+				$("<option value=\"" + setting.name + "\">" + setting.name + ": " + setting.value + ";</option>").appendTo($this.styleSelect);
+			}
+		});
+
+		div = $("<div></div>").appendTo(this.dialog);
+		this.styleSelect = $("<select class=\"cssStyleSelect\" size=\"1\"><option></option></select>").appendTo(div);
+		this.styleSelect.change(function () {
+			if (!this.value)
+				return;
+			$this.link = {
+				styleSheet: $this.ssSelect[0].value,
+				cssRule: $this.ruleSelect[0].value,
+				setting: $this.styleSelect[0].value
+			};
+		});
 
 		div = $("<div></div>").appendTo(this.dialog);
 
 		this.okBtn = $("<button>OK</button>").appendTo(div);
 		this.okBtn.click(function () {
-			var link = "";
-			if ($this.successCallback /*&& link*/)
-				$this.successCallback(link);
+			if ($this.successCallback && $this.link)
+				$this.successCallback($this.link);
 			$this.dialog.hide();
 		});
 
