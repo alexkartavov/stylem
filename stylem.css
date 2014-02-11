@@ -61,7 +61,7 @@
 	text-decoration:line-through;
 }
 
-.xBtn, .sBtn{
+.xBtn, .sBtn, .addBtn {
 	padding-left: 3px;
 	padding-right: 3px;
 	margin-right: 3px;
@@ -97,4 +97,10 @@ div#__emptyDiv {
 
 .styleSheetSelect, .cssRuleSelect, .cssStyleSelect {
 	max-width: 150px;
+}
+
+.styleInput {
+	width:40%;
+	border: 1px solid lightgray;
+	margin: 2px;
 }

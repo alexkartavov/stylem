@@ -97,6 +97,7 @@
 	var changes = null;
 	function registerStyleChanges() {
 		changes = {
+			addedStyles: [],
 			removedStyles: [],
 			linkedStyles: []
 		};
@@ -106,6 +107,15 @@
 				for (var selector in chRules) {
 					if (chRules.hasOwnProperty(selector)) {
 						var rule = chRules[selector];
+						if (hasProperties(rule.addedStyles)) {
+							var rs = { selector: selector, newStyles: [] };
+							for (var s in rule.addedStyles) {
+								if (rule.addedStyles.hasOwnProperty(s)) {
+									rs.newStyles.push({ name: s, value: rule.addedStyles[s] });
+								}
+							}
+							changes.addedStyles.push(rs);
+						}
 						if (hasProperties(rule.removedStyles)) {
 							var rs = {selector: selector, styles: []};
 							for (var s in rule.removedStyles) {
@@ -148,12 +158,34 @@
 
 		document.body.appendChild(emptyDiv);
 
-		var emptyStyle = window.getComputedStyle(emptyDiv);
+		var emptyStyle = emptyDiv.getComputedStyle ? emptyDiv.getComputedStyle() : (emptyDiv.currentStyle ? emptyDiv.currentStyle : emptyDiv.style);
+
+		for (var i = 0; changes.addedStyles && i < changes.addedStyles.length; i++) {
+			var addStyle = changes.addedStyles[i];
+
+			console.log("+ " + addStyle.selector);
+
+			var cssText = "";
+			for (var j = 0; j < addStyle.newStyles.length; j++) {
+				var addSettingName = addStyle.newStyles[j].name;
+				var addSettingValue = addStyle.newStyles[j].value;
+				var addSetting = addSettingName + ": " + addSettingValue + ";";
+				console.log(addSetting);
+				cssText += addSetting;
+			}
+
+			if (injectedStyles.insertRule) {
+				injectedStyles.insertRule(addStyle.selector + " {" + cssText + "}", injectedStyles.cssRules ? injectedStyles.cssRules.length : 0);
+			}
+			else if (injectedStyles.addRule) {
+				injectedStyles.addRule(addStyle.selector, cssText);
+			}
+		}
 
 		for (var i = 0; changes.removedStyles && i < changes.removedStyles.length; i++) {
 			var remStyle = changes.removedStyles[i];
 
-			console.log(remStyle.selector);
+			console.log("- " + remStyle.selector);
 
 			var cssText = "";
 			for (var j = 0; j < remStyle.styles.length; j++) {
@@ -180,7 +212,7 @@
 		for (var i = 0; changes.linkedStyles && i < changes.linkedStyles.length; i++) {
 			var linkStyle = changes.linkedStyles[i];
 
-			console.log(linkStyle.selector);
+			console.log("s " + linkStyle.selector);
 
 			var cssText = "";
 			for (var j = 0; j < linkStyle.links.length; j++) {
@@ -212,7 +244,7 @@
 	function exportChanges(changes) {
 		if (!changes)
 			return "";
-		var fncToExport = [findStyleSheet, findCssRule, getStyleSettings, findStyleSetting, injectChanges];
+		var fncToExport = [defaultStyleValue, findStyleSheet, findCssRule, getStyleSettings, findStyleSetting, injectChanges];
 
 		var expStr = "var changes = ";
 		expStr += JSON.stringify(changes);
@@ -295,7 +327,7 @@
 	}
 
 	StyleSheetObject.prototype.registerChange = function (cssRule) {
-		if (hasProperties(cssRule.removedStyles) || hasProperties(cssRule.linkedStyles))
+		if (hasProperties(cssRule.removedStyles) || hasProperties(cssRule.linkedStyles) || hasProperties(cssRule.addedStyles))
 			this.changedRules[cssRule.selector] = cssRule;
 		else
 			delete this.changedRules[cssRule.selector];
@@ -304,6 +336,7 @@
 	};
 
 	function CssRuleObject(parentSS, rule) {
+		var $this = this;
 		this.selector = "";
 		this.cssText = "";
 		this.styleSheet = parentSS;
@@ -311,6 +344,7 @@
 		this.styles = [];
 		this.removedStyles = {};
 		this.linkedStyles = {};
+		this.addedStyles = {};
 
 		this.selector = this.cssRule.selectorText;
 		this.cssText = this.cssRule.cssText;
@@ -336,12 +370,34 @@
 		}, 500, this);
 
 		this.contentElem = $("<div class=\"classBody\" style=\"display:none;\"></div>").appendTo(this.itemElem);
+		this.containerElem = $("<div></div>").appendTo(this.contentElem);
 		this.itemElem.click(toggleStyleInfo);
 
 		var settings = getStyleSettings(rule);
 		for (var i = 0; i < settings.length; i++) {
 			this.styles.push(new StyleSettingObject(settings[i].name, settings[i].value, this));
 		}
+
+		this.addStyleName = $("<input class=\"styleInput\">").appendTo(this.contentElem);
+		$("<span>:</span>").appendTo(this.contentElem);
+		this.addStyleValue = $("<input class=\"styleInput\">").appendTo(this.contentElem);
+		this.addElem = $("<span class=\"addBtn\">+</span>").appendTo(this.contentElem);
+		this.addElem.click(function (evt) {
+			var name = $this.addStyleName.val();
+			var value = $this.addStyleValue.val();
+			if (name && value) {
+				$this.styles.push(new StyleSettingObject(name, value, $this));
+
+				$this.registerChange({
+					added: true,
+					name: name,
+					value: value
+				});
+
+				$this.addStyleName.val("");
+				$this.addStyleValue.val("");
+			}
+		});
 	}
 
 	CssRuleObject.prototype.registerChange = function (setting) {
@@ -354,6 +410,9 @@
 			this.linkedStyles[setting.name] = setting.link;
 		else
 			delete this.linkedStyles[setting.name];
+
+		if (setting.added)
+			this.addedStyles[setting.name] = setting.value;
 
 		this.styleSheet.registerChange(this);
 	};
@@ -371,7 +430,7 @@
 		this.removed = false;
 		this.link = "";
 
-		this.containerElem = $("<div class=\"styleContainer\"></div>").appendTo(this.rule.contentElem);
+		this.containerElem = $("<div class=\"styleContainer\"></div>").appendTo(this.rule.containerElem);
 		this.xElem = $("<span class=\"xBtn\">x</span>").appendTo(this.containerElem);
 		var $this = this;
 		this.xElem.click(function (evt) {
