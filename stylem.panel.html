@@ -1,0 +1,9 @@
+<div class="stylesDiv">
+	<div class="styleSheetDiv" ng-repeat="ss in styleSheets" ng-click="toggleStyleInfo()">
+		{{ss.id}}
+		<div style="{{ss.display}}">
+			<div class="cssRuleDiv" ng-repeat="cssRule in ss.cssRules">
+			</div>
+		</div>
+	</div>
+</div>
