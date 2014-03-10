@@ -1,0 +1,9 @@
+{
+  "name": "stylem",
+  "version": "0.0.1",
+  "main": "./stylem.js",
+  "dependencies": {
+    "angular": "1.2.14",
+    "angular-touch": "1.2.14"
+  }
+}

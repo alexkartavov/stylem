@@ -2,7 +2,18 @@
 	<div class="styleSheetDiv" ng-repeat="ss in styleSheets" ng-click="toggleStyleInfo()">
 		{{ss.id}}
 		<div style="{{ss.display}}">
-			<div class="cssRuleDiv" ng-repeat="cssRule in ss.cssRules">
+			<div class="cssRuleDiv" title="cssRule.selector" ng-repeat="cssRule in ss.cssRules" ng-click="toggleRuleInfo()">
+				{{cssRule.selector}}
+				<div class="classBody" style="{{cssRule.display}}">
+					<div>
+						<div class="styleContainer" ng-repeat="setting in cssRule.styles">
+							<span class="styleSetting">
+								<span class="styleName">{{setting.name}}</span><span>: </span>
+								<span class="styleValue">{{this.value}}</span><span>;</span>
+							</span>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
