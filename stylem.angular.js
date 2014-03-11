@@ -25,14 +25,16 @@ stylem.controller('stylemCtrl', function ($scope) {
 		$scope.styleSheets.push(new stylem.StyleSheetObject(document.styleSheets[ss]));
 	}
 
-	$scope.toggleStyleInfo = function () {
+	$scope.toggleStyleInfo = function (evt) {
 		this.ss.fillInRules();
 		this.ss.display = (this.ss.display ? "" : this.ss._hide);
+		evt.stopPropagation();
 	}
 
-	$scope.toggleRuleInfo = function () {
+	$scope.toggleRuleInfo = function (evt) {
 		this.cssRule.fillInSettings();
 		this.cssRule.display = (this.cssRule.display ? "" : this.cssRule._hide);
+		evt.stopPropagation();
 	}
 
 });
