@@ -6,7 +6,7 @@
 				{{cssRule.selector}}
 				<div class="classBody" style="{{cssRule.display}}">
 					<div>
-						<div class="styleContainer" ng-repeat="setting in cssRule.styles">
+						<div class="styleContainer" ng-repeat="setting in cssRule.styles" ng-click="$event.stopPropagation();">
 							<span class="styleSetting">
 								<span class="styleName">{{setting.name}}</span><span>: </span>
 								<span class="styleValue">{{setting.value}}</span><span>;</span>
