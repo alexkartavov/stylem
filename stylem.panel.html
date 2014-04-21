@@ -1,10 +1,10 @@
 <div class="stylesDiv">
 	<div class="styleSheetDiv" ng-repeat="ss in styleSheets" ng-click="toggleStyleInfo($event)">
 		{{ss.id}}
-		<div style="{{ss.display}}">
-			<div class="cssRuleDiv" title="cssRule.selector" ng-repeat="cssRule in ss.cssRules" ng-click="toggleRuleInfo($event)">
+		<div class="styleSheetBody" style="display: none;">
+			<div class="cssRuleDiv" title="cssRule.selector" ng-repeat="cssRule in ss.cssRules" ng-init="initCssRuleObj($event)" ng-click="toggleRuleInfo()">
 				{{cssRule.selector}}
-				<div class="classBody" style="{{cssRule.display}}">
+				<div class="classBody" style="display:none;">
 					<div>
 						<div class="styleContainer" ng-repeat="setting in cssRule.styles" ng-click="$event.stopPropagation();">
 							<span class="styleSetting">

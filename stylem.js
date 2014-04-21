@@ -254,7 +254,7 @@
 			expStr += fncToExport[i].toString() + "\n\r";
 		}
 
-		expStr += "injectChanges(changes);\n\r";
+		expStr += "$(function() { injectChanges(changes); });\n\r";
 
 		return expStr;
 	}

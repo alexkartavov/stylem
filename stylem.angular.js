@@ -27,13 +27,16 @@ stylem.controller('stylemCtrl', function ($scope) {
 
 	$scope.toggleStyleInfo = function (evt) {
 		this.ss.fillInRules();
-		this.ss.display = (this.ss.display ? "" : this.ss._hide);
+		$(evt.currentTarget).children(".styleSheetBody").toggle();
 		evt.stopPropagation();
+	}
+
+	$scope.initCssRuleObj = function () {
 	}
 
 	$scope.toggleRuleInfo = function (evt) {
 		this.cssRule.fillInSettings();
-		this.cssRule.display = (this.cssRule.display ? "" : this.cssRule._hide);
+		$(evt.currentTarget).children(".classBody").toggle();
 		evt.stopPropagation();
 	}
 
@@ -47,8 +50,6 @@ stylem.directive('stylemPanel', function () {
 });
 
 stylem.StyleSheetObject = function (styleSheet) {
-	this._hide = "display:none;";
-	this.display = this._hide;
 	this.idLength = 20;
 	this.id = "";
 	this.styleSheet = styleSheet;
@@ -101,11 +102,10 @@ stylem.CssRuleObject = function (parentSS, rule) {
 	var openBr = this.cssText.indexOf("{");
 	var closeBr = this.cssText.indexOf("}");
 	this.cssText = this.cssText.substring(openBr + 1, closeBr);
-	this._hide = "display:none;";
-	this.display = this._hide;
+
 	//this.itemElem = $("<div class=\"cssRuleDiv\" title=\"" + this.selector + "\">" + this.selector + "</div>").appendTo(parentSS.containerElem);
-	/*this.checker = window.setInterval(function (rule) {
-		if (!rule.styleSheet.containerElem[0].offsetHeight)
+	this.checker = window.setInterval(function (rule) {
+		/*if (!rule.styleSheet.containerElem[0].offsetHeight)
 			return;
 		var elems = $(rule.selector);
 		if (rule.applied) {
@@ -119,8 +119,8 @@ stylem.CssRuleObject = function (parentSS, rule) {
 				rule.applied = true;
 				rule.itemElem.addClass("cssRuleApplied");
 			}
-		}
-	}, 500, this);*/
+		}*/
+	}, 500, this);
 
 	//this.contentElem = $("<div class=\"classBody\" style=\"display:none;\"></div>").appendTo(this.itemElem);
 	//this.containerElem = $("<div></div>").appendTo(this.contentElem);
